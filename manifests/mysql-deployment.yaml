@@ -41,8 +41,9 @@ spec:
   ##
   # create deployment selector here
   selector:
-    app: wordpress
-    tier: mysql
+    matchLabels:
+      app: wordpress
+      tier: mysql
   ##
   template:
     ##
