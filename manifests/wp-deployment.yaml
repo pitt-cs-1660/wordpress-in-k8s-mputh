@@ -13,6 +13,9 @@ spec:
   ##
   # create service selector labels here
   # hint: match the deployment's labels (app: wordpress, tier: frontend)
+  selector:
+    app: wordpress
+    tier: frontend
   ##
 ---
 apiVersion: v1
@@ -22,8 +25,8 @@ metadata:
 data:
   ##
   # create non-sensitive data attributes
-  # host: wordpress-mysql
-  # user: wordpress
+  host: wordpress-mysql
+  user: wordpress
   ##
 ---
 apiVersion: apps/v1
@@ -37,12 +40,17 @@ spec:
   replicas: 3
   ##
   # create deployment selector here
-  # app: wordpress
-  # tier: frontend
+  selector:
+    app: wordpress
+    tier: frontend
   ##
   template:
     ##
     # create pod metadata labels here (match the selectorLabels)
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
     ##
     spec:
       containers:
@@ -52,23 +60,45 @@ spec:
         ##
         # mount non-sensitive environment vars from configmap using configMapKeyRef
         # WORDPRESS_DB_HOST (from wordpress configmap, key: host)
+        - name: WORDPRESS_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: wordpress
+              key: host
         # WORDPRESS_DB_USER (from wordpress configmap, key: user)
+        - name: WORDPRESS_DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: wordpress
+              key: user
         ##
 
         ##
         # mount sensitive environment vars from secret using secretKeyRef
         # WORDPRESS_DB_PASSWORD (from database secret, key: user-password)
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database
+              key: user-password
         ##
         ports:
         - containerPort: 80
           name: wordpress
         ##
         # add volumeMounts inside the container spec above
+        volumeMounts:
+        - name: html-volume
+          mountPath: /var/www/html
         # mount path: /var/www/html
         ##
 
       ##
       # add volumes at the pod spec level (same indentation as containers)
+      volumes:
+        - name: html-volume
+          persistentVolumeClaim:
+            claimName: wp-pv-claim
       # reference the PVC: wp-pv-claim
       ##
 
@@ -78,4 +108,14 @@ spec:
 # name: wp-pv-claim
 # storage: 1Gi
 # accessModes: ReadWriteOnce
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wp-pv-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 ##
